@@ -202,8 +202,11 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-// 启动服务器
-startServer();
+// 仅在非测试环境下自动启动服务器
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 // 导出app实例（用于测试）
 export default app;
+export { startServer };
