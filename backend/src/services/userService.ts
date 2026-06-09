@@ -34,7 +34,7 @@ import {
  */
 export const register = async (
   params: RegisterParams
-): Promise<{ userId: string; token: string }> => {
+): Promise<{ user: Omit<User, 'password'>; token: string }> => {
   const { username, password, email, phone } = params;
   
   // 检查用户名是否已存在
@@ -70,12 +70,19 @@ export const register = async (
     [userId, username, hashedPassword, email, phone || null]
   );
   
+  // 查询完整用户信息
+  const users = await query<User>(
+    'SELECT id, username, email, phone, real_name, student_id, avatar, school, campus, dormitory, credit_score, status, created_at, updated_at FROM users WHERE id = ?',
+    [userId]
+  );
+  const user = users[0];
+  
   // 生成登录Token
   const token = generateToken({ userId, username });
   
   logger.info('用户注册成功', { userId, username, email });
 
-  return { userId, token };
+  return { user, token };
 };
 
 /**
