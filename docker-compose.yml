@@ -1,0 +1,90 @@
+# =====================================================
+# 校园二手物品交易与资源共享平台 - Docker Compose 配置
+# 包含 MySQL 数据库 和 后端服务
+# 使用 docker-compose up --build -d 启动
+# =====================================================
+
+services:
+  # =====================================================
+  # MySQL 数据库服务
+  # =====================================================
+  mysql:
+    # 使用官方 MySQL 8.0 镜像，支持 ARM64 和 X86_64
+    image: mysql:8.0
+    container_name: campus-trade-mysql
+    restart: always
+    environment:
+      # 数据库 root 密码
+      MYSQL_ROOT_PASSWORD: campus_trade_123
+      # 自动创建的数据库名
+      MYSQL_DATABASE: campus_trade
+      # 字符集配置
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      # 数据持久化
+      - mysql_data:/var/lib/mysql
+      # 数据库初始化脚本（容器首次启动时自动执行）
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --init-connect='SET NAMES utf8mb4'
+      --wait_timeout=28800
+      --interactive_timeout=28800
+      --max_allowed_packet=64M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pcampus_trade_123"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    networks:
+      - campus-network
+
+  # =====================================================
+  # 后端服务
+  # =====================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campus-trade-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # 数据库配置（连接 docker 内部的 mysql 服务）
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: campus_trade_123
+      DB_NAME: campus_trade
+      # JWT 配置
+      JWT_SECRET: campus_trade_jwt_secret_2024
+      JWT_EXPIRES_IN: 7d
+      # 服务器配置
+      PORT: 3000
+      SERVER_PORT: 3000
+      NODE_ENV: production
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # 使用等待脚本确保数据库就绪
+    command: ["./wait-for-db.sh", "mysql", "3306", "node", "dist/app.js"]
+    networks:
+      - campus-network
+
+# 数据卷
+volumes:
+  mysql_data:
+    driver: local
+
+# 网络
+networks:
+  campus-network:
+    driver: bridge
