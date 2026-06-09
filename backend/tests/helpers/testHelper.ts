@@ -20,16 +20,19 @@ export interface TestOrder {
   order_no: string;
 }
 
-export const generateUniqueUsername = (): string => {
-  return `testuser_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+export const generateUniqueUsername = (prefix = 'test'): string => {
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  const timestamp = Date.now().toString(36).slice(-4);
+  return `${prefix}_${timestamp}${randomStr}`.substring(0, 20);
 };
 
 export const generateUniqueEmail = (): string => {
-  return `test_${Date.now()}_${Math.floor(Math.random() * 10000)}@example.com`;
+  const randomStr = Math.random().toString(36).substring(2, 10);
+  return `test_${randomStr}@example.com`;
 };
 
 export const createTestUser = async (prefix = 'user'): Promise<TestUser> => {
-  const username = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+  const username = generateUniqueUsername(prefix);
   const email = `${username}@example.com`;
   const password = 'testpass123';
 
@@ -42,11 +45,11 @@ export const createTestUser = async (prefix = 'user'): Promise<TestUser> => {
     });
 
   return {
-    id: response.body.data.user.id,
+    id: response.body.data?.user?.id || response.body.data?.userId,
     username,
     email,
     password,
-    token: response.body.data.token,
+    token: response.body.data?.token,
   };
 };
 
